@@ -13,6 +13,7 @@
                      errors-disabled? warnings-disabled?
                      with-disabled-linting error warn short-ds
                      rel? throws-exception? seq-succeeds? to-array-succeeds?]]
+            dynalint.clj160
             #_[clojure.core.typed :as t]))
 
 (when-not (#{"1.5.1" "1.6.0"} (clojure-version))
@@ -1322,7 +1323,104 @@
   (when opts
     (apply configure-linting! opts))
   :ok)
-    
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Andy's temporary alternate version of enabling linting, currently
+;; for normal function Vars only, not macros or inlined functions.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(def clojure-160-clojure-core-vars-to-replace
+  '[
+    cons
+    first
+    next
+    rest
+    conj
+    seq
+    with-meta
+    dissoc
+    disj
+    keys
+    vals
+    key
+    val
+    rseq
+    name
+    namespace
+    remove-all-methods
+    remove-method
+    prefer-method
+    methods
+    get-method
+    prefers
+    find-var
+    deref
+    hash-map
+    sorted-map
+    ])
+
+(def clojure-160-clojure-set-vars-to-replace
+  '[
+    union
+    ])
+
+;(t/ann ^:no-check lint-var-mappings [-> Any])
+(defn ^:private lint-var-mappings []
+  (doseq [this-ns '[clojure.core clojure.set]]
+    (let [mod-ns 'dynalint.clj160
+          core-vars (ns-publics this-ns)
+          mod-vars (ns-publics mod-ns)
+          syms-to-replace (cond
+                            (= this-ns 'clojure.core) clojure-160-clojure-core-vars-to-replace
+                            (= this-ns 'clojure.set) clojure-160-clojure-set-vars-to-replace
+                            :else (System/exit 1))]
+      (doseq [sym syms-to-replace]
+        (when-not (contains? core-vars sym)
+          (printf "dynalint internal error. No public Var '%s/%s'.  Cannot override.\n"
+                  this-ns sym)
+          (flush)
+          (System/exit 1))
+        (when-not (contains? mod-vars sym)
+          (printf "dynalint internal error. No public Var '%s/%s'.  Cannot override.\n"
+                  mod-ns sym)
+          (flush)
+          (System/exit 1))
+        (printf "dynalint attempting to alter Var %s to have the value %s\n"
+                (core-vars sym)
+                (mod-vars sym))
+        (flush)
+        (alter-var-root (core-vars sym) (constantly (mod-vars sym)))))))
+
+(defn lint 
+  "Load the linter. Takes the same options as configure-linting!.
+  
+  Prefer calling configure-linting! to further configure options
+  after initially loading the linter. Dynalint will attempt to reload
+  itself cleanly on multiple calls to `lint`, but it may conflict
+  with other monkey-patching libraries. A warning will be thrown if
+  reloading fails."
+  [& opts]
+  (when opts
+    (let [start-message (get (apply hash-map opts) :start-message)]
+      (when start-message
+        (print "starting dynalint.lint/lint")
+        (if (= start-message :with-call-stack)
+          (try
+            (println " with call stack:")
+            (throw (Exception.))
+            (catch Exception e
+              (clojure.repl/pst e 300)))
+          (println))
+        (flush))))
+  ;;(lint-macros)
+  ;;(lint-inline-vars)
+  (lint-var-mappings)
+  (when opts
+    (apply configure-linting! opts))
+  :ok)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (comment
   (lint)
   (todo-var-inlines)
