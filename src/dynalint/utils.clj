@@ -23,7 +23,7 @@
 (declare prettify-stack-trace drop-until-stack-entry)
 
 (defn error [& args]
-  (println "dbg: error 'dynalint.utils/error")
+;;  (println "dbg: error 'dynalint.utils/error")
   (let [id (inc-id)
         msg (apply str "ERROR " (str "(Dynalint id " id "): ") args)
         e (->
@@ -115,9 +115,9 @@
   (flush))
 
 (defn prettify-stack-trace [^Throwable e & {:keys [process-entries]}]
-  (println "dbg: prettify-stack-trace start")
-  (repl/pst e 200)
-  (println "dbg: prettify-stack-trace end dbg")
+;;  (println "dbg: prettify-stack-trace start")
+;;  (repl/pst e 200)
+;;  (println "dbg: prettify-stack-trace end dbg")
   (letfn [(wrapper-marker? [^String s]
             {:pre [(or (nil? s) (string? s))]}
             ;(prn "wrapper-marker?" s)
@@ -238,7 +238,7 @@
 ;(t/ann warn [Any * -> Any])
 (defn ^:skip-wiki warn [& args]
   (when (should-throw-warning?)
-    (println "dbg: warn 'dynalint.utils/warn")
+;;    (println "dbg: warn 'dynalint.utils/warn")
     (let [id (inc-id)
           msg (print-str "WARNING" (str "(Dynalint id " id "): ") 
                          (apply str args))
